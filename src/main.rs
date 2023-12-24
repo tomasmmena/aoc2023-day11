@@ -16,20 +16,7 @@ struct CompressedSpace {
 
 impl CompressedSpace {
     fn parse(path: String) -> Self {
-        let space: Vec<Vec<Space>> = io::BufReader::new(
-            fs::File::open(path).expect("Could not open file!"))
-            .lines()
-            .map(|line| {
-                let text = line.expect("Falied to read line!");
-                text.chars().map(|c| {
-                    match c {
-                        '.' => Space::Empty,
-                        '#' => Space::Galaxy,
-                        _ => panic!("Invalic character!")
-                    }
-                }).collect::<Vec<Space>>()
-            })
-            .collect();
+        let space: Vec<Vec<Space>> = parse_space(path);
         CompressedSpace {
             x_factors: vec![1; space[0].len()],
             y_factors: vec![1; space.len()],
@@ -60,6 +47,7 @@ impl CompressedSpace {
         }
         total_distance
     }
+
 }
 
 
@@ -180,5 +168,3 @@ mod tests {
         assert_eq!(manhattan_distance(&(7, 19), &(12, 10)), 14);
     }
 }
-
-
