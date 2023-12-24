@@ -8,6 +8,60 @@ enum Space {
     Galaxy
 }
 
+struct CompressedSpace {
+    x_factors: Vec<usize>,
+    y_factors: Vec<usize>,
+    space: Vec<Vec<Space>>
+}
+
+impl CompressedSpace {
+    fn parse(path: String) -> Self {
+        let space: Vec<Vec<Space>> = io::BufReader::new(
+            fs::File::open(path).expect("Could not open file!"))
+            .lines()
+            .map(|line| {
+                let text = line.expect("Falied to read line!");
+                text.chars().map(|c| {
+                    match c {
+                        '.' => Space::Empty,
+                        '#' => Space::Galaxy,
+                        _ => panic!("Invalic character!")
+                    }
+                }).collect::<Vec<Space>>()
+            })
+            .collect();
+        CompressedSpace {
+            x_factors: vec![1; space[0].len()],
+            y_factors: vec![1; space.len()],
+            space: space
+        }
+    }
+
+    fn set_empty_factor(&mut self, distance: usize) {
+        for (i, row) in self.space.iter().enumerate() {
+            if row.iter().all(|s| *s == Space::Empty) { self.y_factors[i] = distance }
+        }
+        for j in 0..self.space[0].len() {
+            if (0..self.space.len()).all(|i| self.space[i][j] == Space::Empty) { self.x_factors[j] = distance }
+        }
+    }
+
+    fn manhattan_distance(&self, one: &(usize, usize), other: &(usize, usize)) -> usize {
+        self.y_factors[one.0.min(other.0)..one.0.max(other.0)].iter().sum::<usize>() + self.x_factors[one.1.min(other.1)..one.1.max(other.1)].iter().sum::<usize>()
+    }
+
+    fn total_distance(&self) -> usize {
+        let galaxies = find_galaxies(&self.space);
+        let mut total_distance: usize = 0;
+        for one_index in 0..galaxies.len() {
+            for other_index in one_index..galaxies.len() {
+                total_distance += self.manhattan_distance(&galaxies[one_index], &galaxies[other_index]) 
+            }
+        }
+        total_distance
+    }
+}
+
 
 /// This function expands a matrix of space in place.
 fn expand(space: &mut Vec<Vec<Space>>) {
@@ -71,7 +125,7 @@ fn parse_space(path: String) -> Vec<Vec<Space>> {
 fn main() {
     let path = env::args().nth(1).expect("Missing required parameter path!");
 
-    let mut space = parse_space(path);
+    let mut space = parse_space(path.clone());
 
     println!("Space of {} x {}.", space[0].len(), space.len());
     expand(&mut space);
@@ -86,7 +140,11 @@ fn main() {
             total_distance += manhattan_distance(&galaxies[one_index], &galaxies[other_index]) 
         }
     }
-    println!("Total distance: {}", total_distance);
+    println!("Total distance (2): {}", total_distance);
+
+    let mut c_space = CompressedSpace::parse(path);
+    c_space.set_empty_factor(1_000_000);
+    println!("Total distance (1M): {}", c_space.total_distance());
 
 }
 
